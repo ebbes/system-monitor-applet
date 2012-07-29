@@ -892,8 +892,8 @@ Pie.prototype = {
         this.actor.connect('repaint', Lang.bind(this, this._draw));
         this.gtop = new GTop.glibtop_fsusage();
         // FIXME Handle colors correctly
-        this.colors = ["#f88", "#8f8", "#88f", "#fbb", "#bfb", "#bbf"];
-            for(let color in this.colors) {
+        this.colors = ["#444", "#666", "#888", "#aaa", "#ccc", "#eee"];
+        for(let color in this.colors) {
             let clutterColor = new Clutter.Color();
             clutterColor.from_string(this.colors[color]);
             this.colors[color] = clutterColor;
@@ -1035,7 +1035,7 @@ MyApplet.prototype = {
 
             item = new PopupMenu.PopupMenuItem(_("Preferences"));
             item.connect('activate', function () {
-                GLib.spawn_command_line_async('python ' + metadata.path + '/config.py');
+                GLib.spawn_command_line_async('bash ' + metadata.path + '/config-launcher.sh');
             });
             this.menu.addMenuItem(item);
 
