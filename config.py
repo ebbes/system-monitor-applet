@@ -29,13 +29,19 @@ an alternative of dconf-editor
 
 """
 from sys import exit
+
+# Since I did not get schema dirs to work using only Gio, we will just set a temporary environment variable.
+# This has to be done BEFORE importing Gio or accessing schema will fail on some machines for some unknown reason.
+import os.path
+os.environ['GSETTINGS_SCHEMA_DIR'] = os.path.dirname(os.path.realpath(__file__))
+
 try:
     from gi.repository import Gtk, Gio, Gdk
 except ImportError:
     print "Missing Dependencies, please install Python Gobject bindings from your distribution."
     exit()
 
-import os.path
+
 import gettext
 from gettext import gettext as _
 gettext.textdomain('system-monitor-applet')
@@ -242,8 +248,7 @@ class App:
     setting_items = ('cpu', 'memory', 'swap', 'net', 'disk', 'thermal', 'freq')
 
     def __init__(self):
-        # Since I did not get it to work using Gio, we will just set a temporary environment variable.
-        os.environ['GSETTINGS_SCHEMA_DIR'] = os.path.dirname(os.path.realpath(__file__))
+        # GSETTINGS_SCHEMA_DIR has already been set.
         self.schema = Gio.Settings('org.cinnamon.applets.system-monitor')
         keys = self.schema.keys()
         self.window = Gtk.Window(title=_('System Monitor Applet Configurator'))

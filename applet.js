@@ -1035,7 +1035,7 @@ MyApplet.prototype = {
 
             item = new PopupMenu.PopupMenuItem(_("Preferences"));
             item.connect('activate', function () {
-                GLib.spawn_command_line_async('bash ' + metadata.path + '/config-launcher.sh');
+                GLib.spawn_command_line_async('python ' + metadata.path + '/config.py');
             });
             this.menu.addMenuItem(item);
 
