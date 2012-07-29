@@ -2,7 +2,7 @@
 
 # system-monitor@ebbes applet config tool
  
-# Cinnamon applet displaying system informations in gnome shell status bar, such as memory usage, cpu usage, network rates…
+# Cinnamon applet displaying system informations in gnome shell status bar, such as memory usage, cpu usage, network rates...
 # ported from gnome-shell extension (for gnome-shell 3.2) to Cinnamon applet by ebbes.ebbes@gmail.com
 
 # Copyright (C) 2011 Florian Mounier aka paradoxxxzero
