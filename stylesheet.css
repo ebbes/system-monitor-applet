@@ -1,51 +1,51 @@
-.sm-label {
+.sma-label {
     color: #bbb;
     font-size: 12px;
 }
 
-.sm-status-label {
+.sma-status-label {
     color: #bbb;
     font-size: 10px;
     padding: 4px 2px 0 5px;
 }
 
-.sm-unit-label {
+.sma-unit-label {
     color: #aaa;
     font-size: 8px;
     padding: 6px 5px 0 2px;
 }
 
-.sm-perc-label {
+.sma-perc-label {
     color: #aaa;
     font-size: 10px;
     padding: 4px 2px 0 2px;
 }
 
-.sm-status-value {
+.sma-status-value {
     min-width: 25px;
     padding-top: 2px;
     text-align: right;
 }
 
-.sm-big-status-value {
+.sma-big-status-value {
     min-width: 32px;
     text-align: right;
 }
 
-.sm-value {
+.sma-value {
     text-align: right;
     width: 45px;
 }
 
-.sm-void {
+.sma-void {
     width: 0px;
 }
 
-.sm-chart {
+.sma-chart {
     padding: 1px 2px;
 }
 
-.sm-tooltip-box {
+.sma-tooltip-box {
     font-size: 0.85em;
     font-weight: bold;
     color: rgba(255, 255, 255, 0.9);
@@ -54,7 +54,27 @@
     padding: 3px;
 }
 
-.sm-tooltip-item {
+.sma-tooltip-item {
     padding: 0px;
     spacing: 10px;
+}
+
+.sma-dialog-headline {
+	font-size: 12pt;
+	font-weight: bold;
+	color: #fff;
+}
+
+.sma-dialog-main-layout {
+	spacing: 24px;
+	padding: 10px;
+}
+
+.sma-dialog-message-layout {
+	spacing: 16px;
+}
+
+.sma-dialog-description {
+	font-size: 10pt;
+	color: white;
 }

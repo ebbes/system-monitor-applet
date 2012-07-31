@@ -21,26 +21,49 @@
 
  Original author: Florian Mounier aka paradoxxxzero
 */
+let smaDepsGtop = true;
+let smaDepsNM = true;
+
 const Applet = imports.ui.applet;
 
 const Clutter = imports.gi.Clutter;
 const GLib = imports.gi.GLib;
-const GTop = imports.gi.GTop;
 const Gio = imports.gi.Gio;
 const Lang = imports.lang;
 const Cinnamon = imports.gi.Cinnamon;
 const St = imports.gi.St;
-const NMClient = imports.gi.NMClient;
-const NetworkManager = imports.gi.NetworkManager;
+const ModalDialog = imports.ui.modalDialog;
 
-const Main = imports.ui.main;const Panel = imports.ui.panel;
+try {
+    const NMClient = imports.gi.NMClient;
+    const NetworkManager = imports.gi.NetworkManager;
+} catch (e) {
+    global.logError(e);
+    smaDepsNM = false;
+}
+
+try {
+    const GTop = imports.gi.GTop;
+} catch (e) {
+    global.logError(e);
+    smaDepsGtop = false;
+}
+
+const Main = imports.ui.main;
+const Panel = imports.ui.panel;
 const PanelMenu = imports.ui.panelMenu;
 const PopupMenu = imports.ui.popupMenu;
 
 const Gettext = imports.gettext;
 const Mainloop = imports.mainloop;
 const Util = imports.misc.util;
-const _ = Gettext.gettext;
+
+const MESSAGE = _("Dependencies missing. Please install \n\
+libgtop, Network Manager and gir bindings \n\
+\t    on Ubuntu: gir1.2-gtop-2.0, gir1.2-networkmanager-1.0 \n\
+\t    on Fedora: libgtop2-devel, NetworkManager-glib-devel \n\
+\t    on Arch: libgtop, networkmanager\n\
+and restart Cinnamon.\n");
 
 let ElementBase, Cpu, Mem, Swap, Net, Disk, Thermal, Freq, Pie, Chart, Icon, TipBox, TipItem, TipMenu;
 let Schema, Background, IconSize;
@@ -48,16 +71,18 @@ let Schema, Background, IconSize;
 function l_limit(t) {
     return (t > 0) ? t : 1000;
 }
+
 function change_text() {
     this.label.visible = Schema.get_boolean(this.elt + '-show-text');
 }
+
 function change_style() {
     let style = Schema.get_string(this.elt + '-style');
     this.text_box.visible = style == 'digit' || style == 'both';
     this.chart.actor.visible = style == 'graph' || style == 'both';
 }
+
 function init(metadata) {
-    //Schema = new Gio.Settings({ schema: 'org.cinnamon.extensions.system-monitor' });
     let schemaSource = Gio.SettingsSchemaSource.new_from_directory(metadata.path,
 	    Gio.SettingsSchemaSource.get_default(), false);
     let schema = schemaSource.lookup('org.cinnamon.applets.system-monitor', false);
@@ -69,13 +94,43 @@ function init(metadata) {
     //Constant doesn't exist. Took me ages to figure out WHAT caused Net() to break...
     IconSize = 16;
 }
+
+ErrorDialog = function() {
+    this._init.apply(this, arguments);
+};
+
+ErrorDialog.prototype = {
+    __proto__: ModalDialog.ModalDialog.prototype,
+    
+    _init: function() {
+        ModalDialog.ModalDialog.prototype._init.call(this);
+        let mainContentBox = new St.BoxLayout({ style_class: 'polkit-dialog-main-layout', vertical: false });
+        this.contentLayout.add(mainContentBox, { x_fill: true, y_fill: true });
+        let messageBox = new St.BoxLayout({ style_class: 'polkit-dialog-message-layout', vertical: true });
+        mainContentBox.add(messageBox, { y_align: St.Align.START });
+        this._subjectLabel = new St.Label({ style_class: 'sma-dialog-headline', text: _("System Monitor Applet: Error") });
+        messageBox.add(this._subjectLabel, {y_fill: false, y_align: St.Align.START });
+        this._descriptionLabel = new St.Label({ style_class: 'polkit-dialog-description', text: MESSAGE });
+        messageBox.add(this._descriptionLabel, { y_fill: true, y_align: St.Align.START });
+        this.setButtons([
+            {
+                label: _("OK"),
+                action: Lang.bind(this, function() {
+                    this.close();
+                }),
+                key: Clutter.Escape
+            }
+        ]);
+    },
+};
+
 Chart = function () {
     this._init.apply(this, arguments);
 };
 
 Chart.prototype = {
     _init: function(width, height, parent) {
-        this.actor = new St.DrawingArea({ style_class: "sm-chart", reactive: false});
+        this.actor = new St.DrawingArea({ style_class: "sma-chart", reactive: false});
         this.parent = parent;
         this.actor.set_width(this.width=width);
         this.actor.set_height(this.height=height);
@@ -141,7 +196,7 @@ TipItem.prototype = {
     _init: function() {
         PopupMenu.PopupBaseMenuItem.prototype._init.call(this);
         this.actor.remove_style_class_name('popup-menu-item');
-        this.actor.add_style_class_name('sm-tooltip-item');
+        this.actor.add_style_class_name('sma-tooltip-item');
     }
 };
 
@@ -153,7 +208,7 @@ TipMenu.prototype = {
     __proto__: PopupMenu.PopupMenuBase.prototype,
 
     _init: function(sourceActor){
-        PopupMenu.PopupMenuBase.prototype._init.call(this, sourceActor, 'sm-tooltip-box');
+        PopupMenu.PopupMenuBase.prototype._init.call(this, sourceActor, 'sma-tooltip-box');
         this.actor = new Cinnamon.GenericContainer();
         this.actor.connect('get-preferred-width', Lang.bind(this, this._boxGetPreferredWidth));
         this.actor.connect('get-preferred-height', Lang.bind(this, this._boxGetPreferredHeight));
@@ -320,7 +375,7 @@ ElementBase.prototype = {
                        Lang.bind(this.chart, this.chart.resize));
 
         this.label = new St.Label({ text: this.elt == "memory" ? "mem" : _(this.elt),
-                                    style_class: "sm-status-label"});
+                                    style_class: "sma-status-label"});
         change_text.call(this);
         Schema.connect('changed::' + this.elt + '-show-text', Lang.bind(this, change_text));
 
@@ -444,16 +499,16 @@ Cpu.prototype = {
     },
     create_text_items: function() {
         return [new St.Label({ style_class: "sm-status-value"}),
-                new St.Label({ text: '%', style_class: "sm-perc-label"})];
+                new St.Label({ text: '%', style_class: "sma-perc-label"})];
 
     },
     create_menu_items: function() {
-        return [new St.Label({ style_class: "sm-void"}),
-                new St.Label({ style_class: "sm-void"}),
-                new St.Label({ style_class: "sm-void"}),
-                new St.Label({ style_class: "sm-value"}),
-                new St.Label({ style_class: "sm-void"}),
-                new St.Label({ text: '%', style_class: "sm-label"})];
+        return [new St.Label({ style_class: "sma-void"}),
+                new St.Label({ style_class: "sma-void"}),
+                new St.Label({ style_class: "sma-void"}),
+                new St.Label({ style_class: "sma-value"}),
+                new St.Label({ style_class: "sma-void"}),
+                new St.Label({ text: '%', style_class: "sma-label"})];
     }
 };
 
@@ -496,16 +551,16 @@ Mem.prototype = {
         this.menu_items[3].text = this.total.toString();
     },
     create_text_items: function() {
-        return [new St.Label({ style_class: "sm-status-value"}),
-                new St.Label({ text: '%', style_class: "sm-perc-label"})];
+        return [new St.Label({ style_class: "sma-status-value"}),
+                new St.Label({ text: '%', style_class: "sma-perc-label"})];
     },
     create_menu_items: function() {
-        return [new St.Label({ style_class: "sm-value"}),
-                new St.Label({ style_class: "sm-void"}),
-                new St.Label({ text: "/", style_class: "sm-label"}),
-                new St.Label({ style_class: "sm-value"}),
-                new St.Label({ style_class: "sm-void"}),
-                new St.Label({ text: "MiB", style_class: "sm-label"})];
+        return [new St.Label({ style_class: "sma-value"}),
+                new St.Label({ style_class: "sma-void"}),
+                new St.Label({ text: "/", style_class: "sma-label"}),
+                new St.Label({ style_class: "sma-value"}),
+                new St.Label({ style_class: "sma-void"}),
+                new St.Label({ text: "MiB", style_class: "sma-label"})];
     }
 };
 
@@ -543,16 +598,16 @@ Swap.prototype = {
     },
 
     create_text_items: function() {
-        return [new St.Label({ style_class: "sm-status-value"}),
-                new St.Label({ text: '%', style_class: "sm-perc-label"})];
+        return [new St.Label({ style_class: "sma-status-value"}),
+                new St.Label({ text: '%', style_class: "sma-perc-label"})];
     },
     create_menu_items: function() {
-        return [new St.Label({ style_class: "sm-value"}),
-                new St.Label({ style_class: "sm-void"}),
-                new St.Label({ text: "/", style_class: "sm-label"}),
-                new St.Label({ style_class: "sm-value"}),
-                new St.Label({ style_class: "sm-void"}),
-                new St.Label({ text: "MiB", style_class: "sm-label"})];
+        return [new St.Label({ style_class: "sma-value"}),
+                new St.Label({ style_class: "sma-void"}),
+                new St.Label({ text: "/", style_class: "sma-label"}),
+                new St.Label({ style_class: "sma-value"}),
+                new St.Label({ style_class: "sma-void"}),
+                new St.Label({ text: "MiB", style_class: "sma-label"})];
     }
 };
 
@@ -678,21 +733,21 @@ Net.prototype = {
         return [new St.Icon({ icon_type: St.IconType.SYMBOLIC,
                               icon_size: 2 * IconSize / 3,
                               icon_name:'go-down'}),
-                new St.Label({ style_class: "sm-status-value"}),
-                new St.Label({ text: 'kiB/s', style_class: "sm-unit-label"}),
+                new St.Label({ style_class: "sma-status-value"}),
+                new St.Label({ text: 'kiB/s', style_class: "sma-unit-label"}),
                 new St.Icon({ icon_type: St.IconType.SYMBOLIC,
                               icon_size: 2 * IconSize / 3,
                               icon_name:'go-up'}),
-                new St.Label({ style_class: "sm-status-value"}),
-                new St.Label({ text: 'kiB/s', style_class: "sm-unit-label"})];
+                new St.Label({ style_class: "sma-status-value"}),
+                new St.Label({ text: 'kiB/s', style_class: "sma-unit-label"})];
     },
     create_menu_items: function() {
-        return [new St.Label({ style_class: "sm-value"}),
-                new St.Label({ text:'k', style_class: "sm-label"}),
+        return [new St.Label({ style_class: "sma-value"}),
+                new St.Label({ text:'k', style_class: "sma-label"}),
                 new St.Icon({ icon_type: St.IconType.SYMBOLIC,
                               icon_size: 16, icon_name:'go-down'}),
-                new St.Label({ style_class: "sm-value"}),
-                new St.Label({ text:'k', style_class: "sm-label"}),
+                new St.Label({ style_class: "sma-value"}),
+                new St.Label({ text:'k', style_class: "sma-label"}),
                 new St.Icon({ icon_type: St.IconType.SYMBOLIC,
                               icon_size: 16, icon_name:'go-up'})];
     }
@@ -763,20 +818,20 @@ Disk.prototype = {
         this.menu_items[3].text = this.text_items[4].text = this.tip_vals[1].toString();
     },
     create_text_items: function() {
-        return [new St.Label({ text: 'R', style_class: "sm-status-label"}),
-                new St.Label({ style_class: "sm-status-value"}),
-                new St.Label({ text: 'MiB/s', style_class: "sm-perc-label"}),
-                new St.Label({ text: 'W', style_class: "sm-status-label"}),
-                new St.Label({ style_class: "sm-status-value"}),
-                new St.Label({ text: 'MiB/s', style_class: "sm-perc-label"})];
+        return [new St.Label({ text: 'R', style_class: "sma-status-label"}),
+                new St.Label({ style_class: "sma-status-value"}),
+                new St.Label({ text: 'MiB/s', style_class: "sma-perc-label"}),
+                new St.Label({ text: 'W', style_class: "sma-status-label"}),
+                new St.Label({ style_class: "sma-status-value"}),
+                new St.Label({ text: 'MiB/s', style_class: "sma-perc-label"})];
     },
     create_menu_items: function() {
-        return [new St.Label({ style_class: "sm-value"}),
-                new St.Label({ text:'MiB/s', style_class: "sm-label"}),
-                new St.Label({ text:'R', style_class: "sm-label"}),
-                new St.Label({ style_class: "sm-value"}),
-                new St.Label({ text:'MiB/s', style_class: "sm-label"}),
-                new St.Label({ text:'W', style_class: "sm-label"})];
+        return [new St.Label({ style_class: "sma-value"}),
+                new St.Label({ text:'MiB/s', style_class: "sma-label"}),
+                new St.Label({ text:'R', style_class: "sma-label"}),
+                new St.Label({ style_class: "sma-value"}),
+                new St.Label({ text:'MiB/s', style_class: "sma-label"}),
+                new St.Label({ text:'W', style_class: "sma-label"})];
     }
 };
 
@@ -812,16 +867,16 @@ Thermal.prototype = {
         this.tip_vals[0] = Math.round(this.vals[0]);
     },
     create_text_items: function() {
-        return [new St.Label({ style_class: "sm-status-value"}),
-                new St.Label({ text: 'C', style_class: "sm-unit-label"})];
+        return [new St.Label({ style_class: "sma-status-value"}),
+                new St.Label({ text: 'C', style_class: "sma-unit-label"})];
     },
     create_menu_items: function() {
-        return [new St.Label({ style_class: "sm-void"}),
-                new St.Label({ style_class: "sm-void"}),
-                new St.Label({ style_class: "sm-void"}),
-                new St.Label({ style_class: "sm-value"}),
-                new St.Label({ style_class: "sm-void"}),
-                new St.Label({ text: 'C', style_class: "sm-label"})];
+        return [new St.Label({ style_class: "sma-void"}),
+                new St.Label({ style_class: "sma-void"}),
+                new St.Label({ style_class: "sma-void"}),
+                new St.Label({ style_class: "sma-value"}),
+                new St.Label({ style_class: "sma-void"}),
+                new St.Label({ text: 'C', style_class: "sma-label"})];
     }
 };
 
@@ -858,17 +913,17 @@ Freq.prototype = {
         this.menu_items[3].text = value;
     },
     create_text_items: function() {
-        return [new St.Label({ style_class: "sm-big-status-value"}),
-                new St.Label({ text: 'MHz', style_class: "sm-perc-label"})];
+        return [new St.Label({ style_class: "sma-big-status-value"}),
+                new St.Label({ text: 'MHz', style_class: "sma-perc-label"})];
 
     },
     create_menu_items: function() {
-        return [new St.Label({ style_class: "sm-void"}),
-                new St.Label({ style_class: "sm-void"}),
-                new St.Label({ style_class: "sm-void"}),
-                new St.Label({ style_class: "sm-value"}),
-                new St.Label({ style_class: "sm-void"}),
-                new St.Label({ text: 'MHz', style_class: "sm-label"})];
+        return [new St.Label({ style_class: "sma-void"}),
+                new St.Label({ style_class: "sma-void"}),
+                new St.Label({ style_class: "sma-void"}),
+                new St.Label({ style_class: "sma-value"}),
+                new St.Label({ style_class: "sma-void"}),
+                new St.Label({ text: 'MHz', style_class: "sma-label"})];
     }
 };
 
@@ -884,7 +939,7 @@ Pie = function () {
 
 Pie.prototype = {
     _init: function() {
-        this.actor = new St.DrawingArea({ style_class: "sm-chart", reactive: false});
+        this.actor = new St.DrawingArea({ style_class: "sma-chart", reactive: false});
         this.width = arguments[0];
         this.height = arguments[1];
         this.actor.set_width(this.width);
@@ -1049,7 +1104,39 @@ MyApplet.prototype = {
     },
 };
 
+function ErrorApplet(metadata, orientation) {
+    this._init(metadata, orientation);
+}
+
+ErrorApplet.prototype = {
+    __proto__: Applet.IconApplet.prototype,
+
+    _init: function(metadata, orientation) {
+        Applet.IconApplet.prototype._init.call(this, orientation);
+        this.set_applet_icon_symbolic_name("dialog-error-symbolic");
+        this.set_applet_tooltip(_("Error"));
+    },
+    
+    on_applet_clicked: function(event) {
+        let errorDialog = new ErrorDialog();
+        errorDialog.open();
+    },
+};
+
+
 function main(metadata, orientation) {
+    if (!smaDepsGtop || !smaDepsNM) {
+        let errorDialog = new ErrorDialog();
+        
+        let dialog_timeout = Mainloop.timeout_add_seconds(
+            1,
+            function () {
+                errorDialog.open();
+                Mainloop.source_remove(dialog_timeout);
+                return true;
+            });
+        return new ErrorApplet(metadata, orientation);
+    }
     init(metadata);
     let myApplet = new MyApplet(metadata, orientation);
     return myApplet;
