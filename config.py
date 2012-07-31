@@ -69,7 +69,7 @@ def hex_to_color(hexstr):
 
 
 def check_sensors():
-    inputs = ['temp1_input','temp2_input']
+    inputs = ['temp1_input','temp2_input','temp3_input','temp4_input','temp5_input']
     sensor_path = '/sys/class/hwmon/'
     sensor_list = []
     string_list = []
