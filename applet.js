@@ -262,7 +262,7 @@ ElementBase.prototype = {
         this.actor.add_actor(this.label);
         this.text_box = new St.BoxLayout();
         
-        this.tooltip = new Tooltips.PanelItemTooltip(this, "tooltip", orientation);
+        this.tooltip = new Tooltips.PanelItemTooltip(this, "", orientation);
         
         this.actor.add_actor(this.text_box);
         this.text_items = this.create_text_items();
