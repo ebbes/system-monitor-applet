@@ -135,7 +135,6 @@ Chart.prototype = {
         this.actor.set_width(this.width=width);
         this.actor.set_height(this.height=height);
         this.actor.connect('repaint', Lang.bind(this, this._draw));
-        this.max_history = 1;
         this.data = [];
         for (let i = 0;i < this.parent.colors.length;i++)
             this.data[i] = [];
@@ -157,11 +156,14 @@ Chart.prototype = {
         if (!this.actor.visible) return;
         let [width, height] = this.actor.get_surface_size();
         let cr = this.actor.get_context();
-        let max = Math.max.apply(this, this.data[this.data.length - 1]);
-        if (this.parent.elt == 'net')
-            this.max_history = 1;
-        max = Math.max(this.max_history, Math.pow(2, Math.ceil(Math.log(max) / Math.log(2))));
-        this.max_history = max;
+        
+        let max;
+        if (this.parent.max) {
+            max = this.parent.max;
+        } else {
+            max = Math.max.apply(this, this.data[this.data.length - 1]);
+            max = Math.max(1, Math.pow(2, Math.ceil(Math.log(max) / Math.log(2))));
+        }
         Clutter.cairo_set_source_color(cr, Background);
         cr.rectangle(0, 0, width, height);
         cr.fill();
@@ -442,12 +444,13 @@ Cpu.prototype = {
     __proto__: ElementBase.prototype,
     elt: 'cpu',
     color_name: ['user', 'system', 'nice', 'iowait', 'other'],
-
+    max: 100,
     _init: function() {
         this.gtop = new GTop.glibtop_cpu();
         this.last = [0,0,0,0,0];
         this.current = [0,0,0,0,0];
         this.total_cores = this.get_cores();
+        this.max *= this.total_cores;
         this.last_total = 0;
         this.usage = [0,0,0,1,0];
         this.menu_item = new PopupMenu.PopupMenuItem(_("Cpu"), {reactive: false});
@@ -522,6 +525,7 @@ Mem.prototype = {
     __proto__: ElementBase.prototype,
     elt: 'memory',
     color_name: ['program', 'buffer', 'cache'],
+    max: 1,
     _init: function() {
         this.menu_item = new PopupMenu.PopupMenuItem(_("Memory"), {reactive: false});
         this.gtop = new GTop.glibtop_mem();
@@ -573,6 +577,7 @@ Swap.prototype = {
     __proto__: ElementBase.prototype,
     elt: 'swap',
     color_name: ['used'],
+    max: 1,
     _init: function() {
         this.menu_item = new PopupMenu.PopupMenuItem(_("Swap"), {reactive: false});
         this.gtop = new GTop.glibtop_swap();
