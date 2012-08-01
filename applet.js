@@ -305,8 +305,8 @@ ElementBase.prototype = {
         this.chart.update();
         let text = "";
         for (let i = 0;i < this.tip_vals.length;i++) {
-            //net has different units, looks better with spaces.
-            if (this.elt == 'net')
+            //net has different units, looks better with spaces and thermal doesn't need tabs.
+            if (this.elt == 'net' || this.elt == 'thermal')
                 text += this.tip_names[i] + " " + this.tip_vals[i].toString() + " " + this.tip_unit_labels[i];
             else
                 text += this.tip_names[i] + "\t" + this.tip_vals[i].toString() + "\t" + this.tip_unit_labels[i];
@@ -516,7 +516,7 @@ Net.prototype = {
     __proto__: ElementBase.prototype,
     elt: 'net',
     color_name: ['down', 'downerrors', 'up', 'uperrors', 'collisions'],
-    tip_names: [_('Down'), _('Up errors'), _('Up'), _('Down errors'), _('Collisions')],
+    tip_names: [_('Down'), _('Down errors'), _('Up'), _('Up errors'), _('Collisions')],
     speed_in_bits: false,
     _init: function(orientation) {
         this.ifs = [];
