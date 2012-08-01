@@ -901,7 +901,7 @@ Icon = function () {
 };
 
 Icon.prototype = {
-    _init: function(orientation) {
+    _init: function() {
         this.actor = new St.Icon({ icon_name: 'utilities-system-monitor',
                                    icon_type: St.IconType.SYMBOLIC,
                                        style_class: 'system-status-icon'});
@@ -939,7 +939,7 @@ MyApplet.prototype = {
                 thermal: new Thermal(orientation),
             }
             let icon = new Icon();
-
+            
             let box = new St.BoxLayout();
             
             this.actor.add_actor(box);
