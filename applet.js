@@ -859,7 +859,6 @@ Thermal.prototype = {
     refresh: function() {
         let sfile = Schema.get_string(this.elt + '-sensor-file');
         if(GLib.file_test(sfile,1<<4)){
-            //global.logError("reading sensor");
             let t_str = Cinnamon.get_file_contents_utf8_sync(sfile).split("\n")[0];
             this.temperature = parseInt(t_str)/1000.0;
         }            
