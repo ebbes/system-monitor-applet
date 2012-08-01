@@ -33,6 +33,7 @@ const Lang = imports.lang;
 const Cinnamon = imports.gi.Cinnamon;
 const St = imports.gi.St;
 const ModalDialog = imports.ui.modalDialog;
+const Tooltips = imports.ui.tooltips;
 
 try {
     const NMClient = imports.gi.NMClient;
@@ -65,7 +66,7 @@ libgtop, Network Manager and gir bindings \n\
 \t    on Arch: libgtop, networkmanager\n\
 and restart Cinnamon.\n");
 
-let ElementBase, Cpu, Mem, Swap, Net, Disk, Thermal, Freq, Pie, Chart, Icon, TipBox, TipItem, TipMenu;
+let ElementBase, Cpu, Mem, Swap, Net, Disk, Thermal, Freq, Pie, Chart, Icon;
 let Schema, Background, IconSize;
 
 function l_limit(t) {
@@ -188,141 +189,18 @@ Chart.prototype = {
     }
 };
 
-TipItem = function () {
-    this._init.apply(this, arguments);
-};
-
-TipItem.prototype = {
-    __proto__: PopupMenu.PopupBaseMenuItem.prototype,
-
-    _init: function() {
-        PopupMenu.PopupBaseMenuItem.prototype._init.call(this);
-        this.actor.remove_style_class_name('popup-menu-item');
-        this.actor.add_style_class_name('sma-tooltip-item');
-    }
-};
-
-TipMenu = function () {
-    this._init.apply(this, arguments);
-};
-
-TipMenu.prototype = {
-    __proto__: PopupMenu.PopupMenuBase.prototype,
-
-    _init: function(sourceActor){
-        PopupMenu.PopupMenuBase.prototype._init.call(this, sourceActor, 'sma-tooltip-box');
-        this.actor = new Cinnamon.GenericContainer();
-        this.actor.connect('get-preferred-width', Lang.bind(this, this._boxGetPreferredWidth));
-        this.actor.connect('get-preferred-height', Lang.bind(this, this._boxGetPreferredHeight));
-        this.actor.connect('allocate', Lang.bind(this, this._boxAllocate));
-        this.actor.add_actor(this.box);
-    },
-    _boxGetPreferredWidth: function (actor, forHeight, alloc) {
-        let columnWidths = this.getColumnWidths();
-        this.setColumnWidths(columnWidths);
-
-        [alloc.min_size, alloc.natural_size] = this.box.get_preferred_width(forHeight);
-    },
-    _boxGetPreferredHeight: function (actor, forWidth, alloc) {
-        [alloc.min_size, alloc.natural_size] = this.box.get_preferred_height(forWidth);
-    },
-    _boxAllocate: function (actor, box, flags) {
-        this.box.allocate(box, flags);
-    },
-    _shift: function() {
-        let node = this.sourceActor.get_theme_node();
-        let contentbox = node.get_content_box(this.sourceActor.get_allocation_box());
-        let allocation = Cinnamon.util_get_transformed_allocation(this.sourceActor);
-        let primary = Main.layoutManager.primaryMonitor;
-        let [x, y] = [allocation.x1 + contentbox.x1,
-                      allocation.y1 + contentbox.y1];
-        let [cx, cy] = [allocation.x1 + (contentbox.x1 + contentbox.x2) / 2,
-                        allocation.y1 + (contentbox.y1 + contentbox.y2) / 2];
-        let [xm, ym] = [allocation.x1 + contentbox.x2,
-                        allocation.y1 + contentbox.y2];
-        let [width, height] = this.actor.get_size();
-        let tipx = Math.floor(Math.min(cx - width / 2,
-                                       primary.x + primary.width - width));
-        let tipy = Math.floor(ym);
-        this.actor.set_position(tipx, tipy);
-    },
-    open: function(animate) {
-        if (this.isOpen)
-            return;
-
-        this.isOpen = true;
-        this.actor.show();
-        this._shift();
-        this.actor.raise_top();
-        this.emit('open-state-changed', true);
-    },
-    close: function(animate) {
-        this.isOpen = false;
-        this.actor.hide();
-        this.emit('open-state-changed', false);
-    }
-};
-
-TipBox = function () {
-    this._init.apply(this, arguments);
-};
-
-TipBox.prototype = {
-    _init: function() {
-        this.actor = new St.BoxLayout({ reactive: true });
-        this.actor._delegate = this;
-        this.tipmenu = new TipMenu(this.actor);
-
-        this.tipmenu.close();
-        this.in_to = this.out_to = 0;
-            
-    },
-    show_tip: function() {
-        this.tipmenu.open();
-        if (this.in_to) {
-            Mainloop.source_remove(this.in_to);
-            this.in_to = 0;
-        }
-    },
-    hide_tip: function() {
-        this.tipmenu.close();
-        if (this.out_to) {
-            Mainloop.source_remove(this.out_to);
-            this.out_to = 0;
-        }
-        if (this.in_to) {
-            Mainloop.source_remove(this.in_to);
-            this.in_to = 0;
-        }
-    },
-    destroy: function() {
-        if (this.in_to) {
-            Mainloop.source_remove(this.in_to);
-            this.in_to = 0;
-        }
-
-        if (this.out_to) {
-            Mainloop.source_remove(this.out_to);
-            this.out_to = 0;
-        }
-
-        this.actor.destroy();
-    },
-};
-
 ElementBase = function () {
     throw new TypeError('Trying to instantiate abstract class ElementBase');
 };
 
 ElementBase.prototype = {
-    __proto__: TipBox.prototype,
-
     elt: '',
     color_name: [],
     text_items: [],
     menu_items: [],
-    _init: function() {
-        TipBox.prototype._init.apply(this, arguments);
+    _init: function(orientation) {
+        this.actor = new St.BoxLayout({ reactive: true });
+        this.actor._delegate = this;
 
         this.vals = [];
         this.tip_labels = [];
@@ -383,7 +261,9 @@ ElementBase.prototype = {
 
         this.actor.add_actor(this.label);
         this.text_box = new St.BoxLayout();
-
+        
+        this.tooltip = new Tooltips.PanelItemTooltip(this, "tooltip", orientation);
+        
         this.actor.add_actor(this.text_box);
         this.text_items = this.create_text_items();
         for (let item in this.text_items)
@@ -404,37 +284,35 @@ ElementBase.prototype = {
                 unit.push(all_unit);
             }
         }
-        for (let i = 0;i < this.color_name.length;i++) {
-            let tipline = new TipItem();
-            this.tipmenu.addMenuItem(tipline);
-            tipline.addActor(new St.Label({ text: _(this.color_name[i]) }));
-            this.tip_labels[i] = new St.Label();
-            tipline.addActor(this.tip_labels[i]);
 
-            this.tip_unit_labels[i] = new St.Label({ text: unit[i] });
-            tipline.addActor(this.tip_unit_labels[i]);
-            this.tip_vals[i] = 0;
+        for (let i = 0;i < this.color_name.length;i++) {
+            this.tip_labels[i] = _(this.color_name[i]);
+            this.tip_unit_labels[i] = unit[i];
         }
     },
     set_tip_unit: function(unit) {
         for (let i = 0;i < this.tip_unit_labels.length;i++) {
-            this.tip_unit_labels[i].text = unit[i];
+            this.tip_unit_labels[i] = unit[i];
         }
     },
     update: function() {
         this.refresh();
         this._apply();
         this.chart.update();
-        for (let i = 0;i < this.tip_vals.length;i++)
-            this.tip_labels[i].text = this.tip_vals[i].toString();
+        let text = "";
+        for (let i = 0;i < this.tip_vals.length;i++) {
+            text += this.tip_labels[i] + " " + this.tip_vals[i].toString() + " " + this.tip_unit_labels[i];
+            if (i != this.tip_vals.length - 1)
+                text += "\n";
+        }
+        
+        this.tooltip._tooltip.set_text(text);
         return true;
     },
     destroy: function() {
-        TipBox.prototype.destroy.call(this);
         Mainloop.source_remove(this.timeout);
     }
 };
-
 
 Cpu = function () {
     this._init.apply(this, arguments);
@@ -445,7 +323,7 @@ Cpu.prototype = {
     elt: 'cpu',
     color_name: ['user', 'system', 'nice', 'iowait', 'other'],
     max: 100,
-    _init: function() {
+    _init: function(orientation) {
         this.gtop = new GTop.glibtop_cpu();
         this.last = [0,0,0,0,0];
         this.current = [0,0,0,0,0];
@@ -454,7 +332,7 @@ Cpu.prototype = {
         this.last_total = 0;
         this.usage = [0,0,0,1,0];
         this.menu_item = new PopupMenu.PopupMenuItem(_("Cpu"), {reactive: false});
-        ElementBase.prototype._init.call(this);
+        ElementBase.prototype._init.call(this, orientation);
         this.tip_format();
         this.update();
     },
@@ -482,9 +360,11 @@ Cpu.prototype = {
         let other = 1;
         for (let i = 0;i < this.usage.length;i++)
             other -= this.usage[i];
+        //Not to be confusing
+        other = Math.max(0, other);
         this.vals = [this.usage[0], this.usage[1], this.usage[2], this.usage[4], other];
         for (let i = 0;i < 5;i++)
-            this.tip_vals[i] = Math.round(this.vals[i] * 100);
+            this.tip_vals[i] = Math.round(this.vals[i]);
     },
 
     get_cores: function(){
@@ -526,11 +406,11 @@ Mem.prototype = {
     elt: 'memory',
     color_name: ['program', 'buffer', 'cache'],
     max: 1,
-    _init: function() {
+    _init: function(orientation) {
         this.menu_item = new PopupMenu.PopupMenuItem(_("Memory"), {reactive: false});
         this.gtop = new GTop.glibtop_mem();
         this.mem = [0, 0, 0];
-        ElementBase.prototype._init.call(this);
+        ElementBase.prototype._init.call(this, orientation);
         this.tip_format();
         this.update();
     },
@@ -578,10 +458,10 @@ Swap.prototype = {
     elt: 'swap',
     color_name: ['used'],
     max: 1,
-    _init: function() {
+    _init: function(orientation) {
         this.menu_item = new PopupMenu.PopupMenuItem(_("Swap"), {reactive: false});
         this.gtop = new GTop.glibtop_swap();
-        ElementBase.prototype._init.call(this);
+        ElementBase.prototype._init.call(this, orientation);
         this.tip_format();
         this.update();
     },
@@ -626,7 +506,7 @@ Net.prototype = {
     elt: 'net',
     color_name: ['down', 'downerrors', 'up', 'uperrors', 'collisions'],
     speed_in_bits: false,
-    _init: function() {
+    _init: function(orientation) {
         this.ifs = [];
         this.client = NMClient.Client.new();
         this.update_iface_list();
@@ -650,7 +530,7 @@ Net.prototype = {
         this.last_time = 0;
         this.menu_item = new PopupMenu.PopupMenuItem(_("Network"), {reactive: false});
         
-        ElementBase.prototype._init.call(this);
+        ElementBase.prototype._init.call(this, orientation);
         
         this.tip_format(['kiB/s', '/s', 'kiB/s', '/s', '/s']);
         this.update_units();
@@ -767,7 +647,7 @@ Disk.prototype = {
     __proto__: ElementBase.prototype,
     elt: 'disk',
     color_name: ['read', 'write'],
-    _init: function() {
+    _init: function(orientation) {
         // Can't get mountlist:
         // GTop.glibtop_get_mountlist
         // Error: No symbol 'glibtop_get_mountlist' in namespace 'GTop'
@@ -788,7 +668,7 @@ Disk.prototype = {
         GTop.glibtop_get_fsusage(this.gtop, this.mounts[0]);
         this.block_size = this.gtop.block_size/1024/1024/8;
         this.menu_item = new PopupMenu.PopupMenuItem(_("Disk"), {reactive: false});
-        ElementBase.prototype._init.call(this);
+        ElementBase.prototype._init.call(this, orientation);
         this.tip_format('kB/s');
         this.update();
     },
@@ -848,10 +728,10 @@ Thermal.prototype = {
     __proto__: ElementBase.prototype,
     elt: 'thermal',
     color_name: ['tz0'],
-    _init: function() {
+    _init: function(orientation) {
         this.temperature = -273.15;
         this.menu_item = new PopupMenu.PopupMenuItem(_("Thermal"), {reactive: false});
-        ElementBase.prototype._init.call(this);
+        ElementBase.prototype._init.call(this, orientation);
         this.tip_format('C');
         Schema.connect('changed::' + this.elt + '-sensor-file', Lang.bind(this, this.refresh));
         this.update();
@@ -859,6 +739,7 @@ Thermal.prototype = {
     refresh: function() {
         let sfile = Schema.get_string(this.elt + '-sensor-file');
         if(GLib.file_test(sfile,1<<4)){
+            //global.logError("reading sensor");
             let t_str = Cinnamon.get_file_contents_utf8_sync(sfile).split("\n")[0];
             this.temperature = parseInt(t_str)/1000.0;
         }            
@@ -892,10 +773,10 @@ Freq.prototype = {
     __proto__: ElementBase.prototype,
     elt: 'freq',
     color_name: ['freq'],
-    _init: function() {
+    _init: function(orientation) {
         this.freq = 0;
         this.menu_item = new PopupMenu.PopupMenuItem(_("Frequency"), {reactive: false});
-        ElementBase.prototype._init.call(this);
+        ElementBase.prototype._init.call(this, orientation);
         this.tip_format('MHz');
         this.update();
     },
@@ -1038,13 +919,13 @@ MyApplet.prototype = {
             this.menu = new Applet.AppletPopupMenu(this, orientation);
             this.menuManager.addMenu(this.menu);
             let elts = {
-                cpu: new Cpu(),
-                freq: new Freq(),
-                memory: new Mem(),
-                swap: new Swap(),
-                net: new Net(),
-                disk: new Disk(),
-                thermal: new Thermal(),
+                cpu: new Cpu(orientation),
+                freq: new Freq(orientation),
+                memory: new Mem(orientation),
+                swap: new Swap(orientation),
+                net: new Net(orientation),
+                disk: new Disk(orientation),
+                thermal: new Thermal(orientation),
             }
             let icon = new Icon();
             
@@ -1054,6 +935,7 @@ MyApplet.prototype = {
             box.add_actor(icon.actor);
             for (let elt in elts) {
                 box.add_actor(elts[elt].actor);
+                //elts[elt].tooltip = new Tooltips.PanelItemTooltip(elts[elt], elt, orientation);
                 this.menu.addMenuItem(elts[elt].menu_item);
             }
             
