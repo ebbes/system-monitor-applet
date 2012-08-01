@@ -362,7 +362,7 @@ Cpu.prototype = {
     _apply: function() {
         let percent = Math.round(((100*this.total_cores)-this.usage[3])/this.total_cores);
         this.text_items[0].text = this.menu_items[3].text = percent.toString();
-        let other = 1;
+        let other = 100;
         for (let i = 0;i < this.usage.length;i++)
             other -= this.usage[i];
         //Not to be confusing
