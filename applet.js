@@ -2,7 +2,13 @@
  system-monitor@ebbes applet
  
  Cinnamon applet displaying system informations in gnome shell status bar, such as memory usage, cpu usage, network rates…
- ported from gnome-shell extension (for gnome-shell 3.2) to Cinnamon applet by ebbes.ebbes@gmail.com
+ forked from gnome-shell extension (for gnome-shell 3.2) to Cinnamon applet by ebbes.ebbes@gmail.com
+ Changes that were done:
+    * Removed battery functionality
+    * Removed tooltips (as they were crashing Cinnamon)
+    * Implemented simpler tooltips
+    * Some backports from gnome-shell 3.4 extension
+    * Some small changes I liked
 
  Copyright (C) 2011 Florian Mounier aka paradoxxxzero
  
@@ -203,7 +209,6 @@ ElementBase.prototype = {
         this.actor._delegate = this;
 
         this.vals = [];
-        this.tip_labels = [];
         this.tip_vals = [];
         this.tip_unit_labels = [];
 
@@ -280,13 +285,12 @@ ElementBase.prototype = {
         if(typeof(unit) == 'string') {
             let all_unit = unit;
             unit = [];
-            for (let i = 0;i < this.color_name.length;i++) {
+            for (let i = 0;i < this.tip_names.length;i++) {
                 unit.push(all_unit);
             }
         }
 
         for (let i = 0;i < this.color_name.length;i++) {
-            this.tip_labels[i] = _(this.color_name[i]);
             this.tip_unit_labels[i] = unit[i];
         }
     },
@@ -301,7 +305,7 @@ ElementBase.prototype = {
         this.chart.update();
         let text = "";
         for (let i = 0;i < this.tip_vals.length;i++) {
-            text += this.tip_labels[i] + " " + this.tip_vals[i].toString() + " " + this.tip_unit_labels[i];
+            text += this.tip_names[i] + " " + this.tip_vals[i].toString() + " " + this.tip_unit_labels[i];
             if (i != this.tip_vals.length - 1)
                 text += "\n";
         }
@@ -322,6 +326,7 @@ Cpu.prototype = {
     __proto__: ElementBase.prototype,
     elt: 'cpu',
     color_name: ['user', 'system', 'nice', 'iowait', 'other'],
+    tip_names: [_('User'), _('System'), _('Nice'), _('Wait'), _('Other')],
     max: 100,
     _init: function(orientation) {
         this.gtop = new GTop.glibtop_cpu();
@@ -405,6 +410,7 @@ Mem.prototype = {
     __proto__: ElementBase.prototype,
     elt: 'memory',
     color_name: ['program', 'buffer', 'cache'],
+    tip_names: [_('Program'), _('Buffer'), _('Cache')],
     max: 1,
     _init: function(orientation) {
         this.menu_item = new PopupMenu.PopupMenuItem(_("Memory"), {reactive: false});
@@ -457,6 +463,7 @@ Swap.prototype = {
     __proto__: ElementBase.prototype,
     elt: 'swap',
     color_name: ['used'],
+    tip_names: [_('Used')],
     max: 1,
     _init: function(orientation) {
         this.menu_item = new PopupMenu.PopupMenuItem(_("Swap"), {reactive: false});
@@ -505,6 +512,7 @@ Net.prototype = {
     __proto__: ElementBase.prototype,
     elt: 'net',
     color_name: ['down', 'downerrors', 'up', 'uperrors', 'collisions'],
+    tip_names: [_('Down'), _('Down errors'), _('Up'), _('Up errors'), _('Collisions')],
     speed_in_bits: false,
     _init: function(orientation) {
         this.ifs = [];
@@ -647,6 +655,7 @@ Disk.prototype = {
     __proto__: ElementBase.prototype,
     elt: 'disk',
     color_name: ['read', 'write'],
+    tip_names: [_('Read'), _('Write')],
     _init: function(orientation) {
         // Can't get mountlist:
         // GTop.glibtop_get_mountlist
@@ -728,6 +737,7 @@ Thermal.prototype = {
     __proto__: ElementBase.prototype,
     elt: 'thermal',
     color_name: ['tz0'],
+    tip_names: [_('Temperature')],
     _init: function(orientation) {
         this.temperature = -273.15;
         this.menu_item = new PopupMenu.PopupMenuItem(_("Thermal"), {reactive: false});
@@ -773,6 +783,7 @@ Freq.prototype = {
     __proto__: ElementBase.prototype,
     elt: 'freq',
     color_name: ['freq'],
+    tip_names: [_('Frequency')],
     _init: function(orientation) {
         this.freq = 0;
         this.menu_item = new PopupMenu.PopupMenuItem(_("Frequency"), {reactive: false});
@@ -890,7 +901,7 @@ Icon = function () {
 };
 
 Icon.prototype = {
-    _init: function() {
+    _init: function(orientation) {
         this.actor = new St.Icon({ icon_name: 'utilities-system-monitor',
                                    icon_type: St.IconType.SYMBOLIC,
                                        style_class: 'system-status-icon'});
@@ -928,14 +939,13 @@ MyApplet.prototype = {
                 thermal: new Thermal(orientation),
             }
             let icon = new Icon();
-            
+
             let box = new St.BoxLayout();
             
             this.actor.add_actor(box);
             box.add_actor(icon.actor);
             for (let elt in elts) {
                 box.add_actor(elts[elt].actor);
-                //elts[elt].tooltip = new Tooltips.PanelItemTooltip(elts[elt], elt, orientation);
                 this.menu.addMenuItem(elts[elt].menu_item);
             }
             
