@@ -742,7 +742,7 @@ Thermal.prototype = {
         this.temperature = -273.15;
         this.menu_item = new PopupMenu.PopupMenuItem(_("Thermal"), {reactive: false});
         ElementBase.prototype._init.call(this, orientation);
-        this.tip_format('C');
+        this.tip_format('\u00b0C');
         Schema.connect('changed::' + this.elt + '-sensor-file', Lang.bind(this, this.refresh));
         this.update();
     },
@@ -763,7 +763,7 @@ Thermal.prototype = {
     },
     create_text_items: function() {
         return [new St.Label({ style_class: "sma-status-value"}),
-                new St.Label({ text: 'C', style_class: "sma-unit-label"})];
+                new St.Label({ text: '\u00b0C', style_class: "sma-unit-label"})];
     },
     create_menu_items: function() {
         return [new St.Label({ style_class: "sma-void"}),
@@ -771,7 +771,7 @@ Thermal.prototype = {
                 new St.Label({ style_class: "sma-void"}),
                 new St.Label({ style_class: "sma-value"}),
                 new St.Label({ style_class: "sma-void"}),
-                new St.Label({ text: 'C', style_class: "sma-label"})];
+                new St.Label({ text: '\u00b0C', style_class: "sma-label"})];
     }
 };
 
