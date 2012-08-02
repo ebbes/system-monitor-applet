@@ -362,14 +362,14 @@ Cpu.prototype = {
     _apply: function() {
         let percent = Math.round(((100*this.total_cores)-this.usage[3])/this.total_cores);
         this.text_items[0].text = this.menu_items[3].text = percent.toString();
-        let other = 100;
+        let other = 100 * this.total_cores;
         for (let i = 0;i < this.usage.length;i++)
             other -= this.usage[i];
         //Not to be confusing
         other = Math.max(0, other);
         this.vals = [this.usage[0], this.usage[1], this.usage[2], this.usage[4], other];
         for (let i = 0;i < 5;i++)
-            this.tip_vals[i] = Math.round(this.vals[i]);
+            this.tip_vals[i] = Math.round(this.vals[i] / this.total_cores);
     },
 
     get_cores: function(){
