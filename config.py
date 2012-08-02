@@ -30,13 +30,18 @@ an alternative of dconf-editor
 """
 from sys import exit
 
+# Since I did not get schema dirs to work using only Gio, we will just set a temporary environment variable.
+# This has to be done BEFORE importing Gio or accessing schema will fail on some machines for some unknown reason.
+import os.path
+os.environ['GSETTINGS_SCHEMA_DIR'] = os.path.dirname(os.path.realpath(__file__))
+
 try:
     from gi.repository import Gtk, Gio, Gdk
 except ImportError:
     print "Missing Dependencies, please install Python Gobject bindings from your distribution."
     exit()
 
-import os.path
+
 import gettext
 from gettext import gettext as _
 gettext.textdomain('system-monitor-applet')
@@ -235,7 +240,12 @@ class SettingFrame:
             item.set_active(self.schema.get_boolean(key))
             self.hbox3.add(item)
             item.connect('toggled', set_boolean, self.schema, key)
-            
+        elif sections[1] == 'usage':
+            item = Select(_('Display disk usage as'))
+            item.add((_('pie'), _('bar'), _('none')))
+            item.set_value(self.schema.get_enum(key))
+            self.hbox3.add(item.actor)
+            item.selector.connect('changed', set_enum, self.schema, key)
 
 
 class App:
@@ -243,13 +253,8 @@ class App:
     setting_items = ('cpu', 'memory', 'swap', 'net', 'disk', 'thermal', 'freq')
 
     def __init__(self):
-        # heavy use of Gio API just to load a settings schema in script dir
-        scriptpath = os.path.dirname(os.path.realpath(__file__))
-        # No parent source specified, so schema will not be found if placed
-        # in /usr/share/glib-2.0/schemas, but we won't put it there anyway.
-        schemaSource = Gio.SettingsSchemaSource.new_from_directory(scriptpath, None, False)
-        lookupSchema = schemaSource.lookup('org.cinnamon.applets.system-monitor', False)
-        self.schema = Gio.Settings.new_full(lookupSchema, None, None)
+        # GSETTINGS_SCHEMA_DIR has already been set.
+        self.schema = Gio.Settings('org.cinnamon.applets.system-monitor')
         keys = self.schema.keys()
         self.window = Gtk.Window(title=_('System Monitor Applet Configurator'))
         self.window.connect('destroy', Gtk.main_quit)

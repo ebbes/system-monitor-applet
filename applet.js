@@ -1012,15 +1012,17 @@ MyApplet.prototype = {
                 this.menu.addMenuItem(elts[elt].menu_item);
             }
             
-            let pie = new Pie(300, 300);
-            pie.create_menu_item();
-            pie.show(true);
-            this.menu.addMenuItem(pie.menu_item);
+            this.pie = new Pie(300, 300);
+            this.pie.create_menu_item();
+            this.menu.addMenuItem(this.pie.menu_item);
             
-            let bar = new Bar(300, 150);
-            bar.create_menu_item();
-            bar.show(true);
-            this.menu.addMenuItem(bar.menu_item);
+            this.bar = new Bar(300, 150);
+            this.bar.create_menu_item();
+            this.menu.addMenuItem(this.bar.menu_item);
+            
+            this.change_usage();
+            
+            Schema.connect('changed::' + 'disk-usage-style', Lang.bind(this, this.change_usage));
             
             this.menu.addMenuItem(new PopupMenu.PopupSeparatorMenuItem());
             
@@ -1064,6 +1066,12 @@ MyApplet.prototype = {
     
     on_applet_clicked: function(event) {
         this.menu.toggle();
+    },
+    
+    change_usage: function() {
+        let usage = Schema.get_string('disk-usage-style');
+        this.pie.show(usage == 'pie');
+        this.bar.show(usage == 'bar');
     },
 };
 
