@@ -72,7 +72,7 @@ libgtop, Network Manager and gir bindings \n\
 \t    on Arch: libgtop, networkmanager\n\
 and restart Cinnamon.\n");
 
-let ElementBase, Cpu, Mem, Swap, Net, Disk, Thermal, Freq, Pie, Chart, Icon;
+let ElementBase, Cpu, Mem, Swap, Net, Disk, Thermal, Freq, Graph, Bar, Pie, Chart, Icon;
 let Schema, Background, IconSize;
 
 function l_limit(t) {
@@ -829,26 +829,13 @@ Freq.prototype = {
  * c) I was too lazy to change much of its implementation.
  */
 
-Pie = function () {
+Graph = function() {
     this._init.apply(this, arguments);
 };
 
-Pie.prototype = {
+Graph.prototype = {
+    menu_item: '',
     _init: function() {
-        this.actor = new St.DrawingArea({ style_class: "sma-chart", reactive: false});
-        this.width = arguments[0];
-        this.height = arguments[1];
-        this.actor.set_width(this.width);
-        this.actor.set_height(this.height);
-        this.actor.connect('repaint', Lang.bind(this, this._draw));
-        this.gtop = new GTop.glibtop_fsusage();
-        // FIXME Handle colors correctly
-        this.colors = ["#444", "#666", "#888", "#aaa", "#ccc", "#eee"];
-        for(let color in this.colors) {
-            let clutterColor = new Clutter.Color();
-            clutterColor.from_string(this.colors[color]);
-            this.colors[color] = clutterColor;
-        }
         // Can't get mountlist:
         // GTop.glibtop_get_mountlist
         // Error: No symbol 'glibtop_get_mountlist' in namespace 'GTop'
@@ -861,7 +848,83 @@ Pie.prototype = {
                 this.mounts.push(mount[1]);
             }
         }
+        
+        this.actor = new St.DrawingArea({ style_class: "sma-chart", reactive: false});
+        this.width = arguments[0][1];
+        this.height = arguments[0][1];
+        this.actor.set_width(this.width);
+        this.actor.set_height(this.height);
+        this.actor.connect('repaint', Lang.bind(this, this._draw));
+        this.gtop = new GTop.glibtop_fsusage();
+        // FIXME Handle colors correctly
+        this.colors = ["#444", "#666", "#888", "#aaa", "#ccc", "#eee"];
+        for(let color in this.colors) {
+            let clutterColor = new Clutter.Color();
+            clutterColor.from_string(this.colors[color]);
+            this.colors[color] = clutterColor;
+        }
     },
+    create_menu_item: function() {
+        this.menu_item = new PopupMenu.PopupBaseMenuItem({reactive: false});
+        this.menu_item.addActor(this.actor, {span: -1, expand: true});
+    },
+    show: function(visible) {
+        this.menu_item.actor.visible = visible;
+    }
+};
+
+Bar = function () {
+    this._init.apply(this, arguments);
+};
+
+Bar.prototype = {
+    __proto__: Graph.prototype,
+    
+    _init: function() {
+        this.thickness = 15;
+        this.fontsize = 14;
+        Graph.prototype._init.call(this, arguments);
+        this.actor.set_height(this.mounts.length * (3 * this.thickness) / 2);
+    },
+    
+    _draw: function() {
+        if (!this.actor.visible) return;
+        let [width, height] = this.actor.get_surface_size();
+        let cr = this.actor.get_context();
+
+        let x0 = width/8;
+        let y0 = this.thickness/2;
+
+        cr.setLineWidth(this.thickness);
+        cr.setFontSize(this.fontsize);
+        for (let mount in this.mounts) {
+            GTop.glibtop_get_fsusage(this.gtop, this.mounts[mount]);
+            let perc_full = (this.gtop.blocks - this.gtop.bfree)/this.gtop.blocks;
+            Clutter.cairo_set_source_color(cr, this.colors[mount % this.colors.length]);
+            cr.moveTo(2*x0,y0)
+            cr.relLineTo(perc_full*0.6*width, 0);
+            cr.moveTo(0, y0+this.thickness/3);
+            cr.showText(this.mounts[mount]);
+            //cr.stroke();
+            cr.moveTo(width - x0, y0+this.thickness/3);
+            cr.showText(Math.round(perc_full*100).toString()+'%');
+            cr.stroke();
+            y0 += (3 * this.thickness) / 2;
+        }
+    }
+};
+
+Pie = function () {
+    this._init.apply(this, arguments);
+};
+
+Pie.prototype = {
+    __proto__: Graph.prototype,
+    
+    _init: function() {
+        Graph.prototype._init.call(this, arguments);
+    },
+    
     _draw: function() {
         if (!this.actor.visible) return;
         let [width, height] = this.actor.get_surface_size();
@@ -950,12 +1013,16 @@ MyApplet.prototype = {
             }
             
             let pie = new Pie(300, 300);
-            let item = new PopupMenu.PopupBaseMenuItem({reactive: false});
-            item.addActor(pie.actor, {span: -1, expand: true});
-            this.menu.addMenuItem(item);
+            pie.create_menu_item();
+            pie.show(true);
+            this.menu.addMenuItem(pie.menu_item);
+            
+            let bar = new Bar(300, 150);
+            bar.create_menu_item();
+            bar.show(true);
+            this.menu.addMenuItem(bar.menu_item);
             
             this.menu.addMenuItem(new PopupMenu.PopupSeparatorMenuItem());
-            
             
             let menu_timeout;
             this.menu.connect(
