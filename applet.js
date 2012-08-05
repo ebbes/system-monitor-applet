@@ -332,8 +332,14 @@ Cpu.prototype = {
         this.gtop = new GTop.glibtop_cpu();
         this.last = [0,0,0,0,0];
         this.current = [0,0,0,0,0];
-        this.total_cores = this.get_cores();
-        this.max *= this.total_cores;
+        try {
+            this.total_cores = GTop.glibtop_get_sysinfo().ncpu;
+            this.max *= this.total_cores;
+        } catch(e) {
+            this.total_cores = 1;
+            global.logError(e);
+            global.logError("Assuming 1 core");
+        }
         this.last_total = 0;
         this.usage = [0,0,0,1,0];
         this.menu_item = new PopupMenu.PopupMenuItem(_("Cpu"), {reactive: false});
@@ -372,19 +378,6 @@ Cpu.prototype = {
             this.tip_vals[i] = Math.round(this.vals[i] / this.total_cores);
     },
 
-    get_cores: function(){
-        // Getting xcpu_total makes gjs 1.29.18 segfault
-        // works with gjs 1.32.0 on fedora 17
-        let cores = 0;
-        GTop.glibtop_get_cpu(this.gtop);
-        let gtop_total = this.gtop.xcpu_total
-        for (let i = 0; i < gtop_total.length;i++){
-            if (gtop_total[i] > 0)
-                cores++;
-        }
-        return cores;
-        //return 1;
-    },
     create_text_items: function() {
         return [new St.Label({ style_class: "sm-status-value"}),
                 new St.Label({ text: '%', style_class: "sma-perc-label"})];
