@@ -74,6 +74,7 @@ and restart Cinnamon.\n");
 
 let ElementBase, Cpu, Mem, Swap, Net, Disk, Thermal, Freq, Graph, Bar, Pie, Chart, Icon;
 let Schema, Background, IconSize;
+let UsePython2 = false;
 
 function l_limit(t) {
     return (t > 0) ? t : 1000;
@@ -90,9 +91,10 @@ function change_style() {
 }
 
 function init(metadata) {
+    //Should find schema even if installed in /usr/share/glib-2.0/schemas
     let schemaSource = Gio.SettingsSchemaSource.new_from_directory(metadata.path,
 	    Gio.SettingsSchemaSource.get_default(), false);
-    let schema = schemaSource.lookup('org.cinnamon.applets.system-monitor', false);
+    let schema = schemaSource.lookup('org.cinnamon.applets.system-monitor', true);
     Schema = new Gio.Settings({ settings_schema: schema });
     
     Background = new Clutter.Color();
@@ -100,6 +102,16 @@ function init(metadata) {
     //IconSize = Math.round(Panel.PANEL_ICON_SIZE * 4 / 5);
     //Constant doesn't exist. Took me ages to figure out WHAT caused Net() to break...
     IconSize = 16;
+    
+    //Determine python binary to use
+    [status, stdout, stderr] = GLib.spawn_command_line_sync("python --version");
+    
+    //Somehow python seems to print version on stderr?
+    //Output: e.g. "Python 2.7.3"
+    if (stderr && stderr.length > 7)
+    {
+        UsePython2 = (stderr[7] != 50); //50 == ASCII for '2'
+    }
 }
 
 ErrorDialog = function() {
@@ -379,7 +391,7 @@ Cpu.prototype = {
     },
 
     create_text_items: function() {
-        return [new St.Label({ style_class: "sm-status-value"}),
+        return [new St.Label({ style_class: "sma-status-value"}),
                 new St.Label({ text: '%', style_class: "sma-perc-label"})];
 
     },
@@ -1048,7 +1060,14 @@ MyApplet.prototype = {
 
             item = new PopupMenu.PopupMenuItem(_("Preferences"));
             item.connect('activate', function () {
-                GLib.spawn_command_line_async('python ' + metadata.path + '/config.py');
+                if (UsePython2)
+                {
+                    GLib.spawn_command_line_async('python2 ' + metadata.path + '/config.py');
+                }
+                else
+                {
+                    GLib.spawn_command_line_async('python ' + metadata.path + '/config.py');
+                }
             });
             this.menu.addMenuItem(item);
 
@@ -1105,4 +1124,3 @@ function main(metadata, orientation) {
     let myApplet = new MyApplet(metadata, orientation);
     return myApplet;
 }
-
