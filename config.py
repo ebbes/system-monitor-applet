@@ -30,7 +30,12 @@ an alternative of dconf-editor
 """
 from sys import exit
 
-from gi.repository import Gtk, Gio, Gdk
+try:
+    from gi.repository import Gtk, Gio, Gdk
+except ImportError:
+    print "Missing Dependencies, please install Python Gobject bindings from your distribution."
+    exit()
+
 import os.path
 import gettext
 from gettext import gettext as _
@@ -245,10 +250,9 @@ class App:
     def __init__(self):
         # heavy use of Gio API just to load a settings schema in script dir
         scriptpath = os.path.dirname(os.path.realpath(__file__))
-        # No parent source specified, so schema will not be found if placed
-        # in /usr/share/glib-2.0/schemas, but we won't put it there anyway.
-        schemaSource = Gio.SettingsSchemaSource.new_from_directory(scriptpath, None, False)
-        lookupSchema = schemaSource.lookup('org.cinnamon.applets.system-monitor', False)
+        # Schema should be found in applet dir or /usr/share/glib-2.0/schemas
+        schemaSource = Gio.SettingsSchemaSource.new_from_directory(scriptpath, Gio.SettingsSchemaSource.get_default(), False)
+        lookupSchema = schemaSource.lookup('org.cinnamon.applets.system-monitor', True)
         self.schema = Gio.Settings.new_full(lookupSchema, None, None)
         keys = self.schema.keys()
         self.window = Gtk.Window(title=_('System Monitor Applet Configurator'))
