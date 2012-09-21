@@ -30,11 +30,7 @@ an alternative of dconf-editor
 """
 from sys import exit
 
-try:
-    from gi.repository import Gtk, Gio, Gdk
-except ImportError:
-    print "Missing Dependencies, please install Python Gobject bindings from your distribution."
-    exit()
+from gi.repository import Gtk, Gio, Gdk
 
 import os.path
 import gettext
