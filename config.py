@@ -246,8 +246,10 @@ class App:
     def __init__(self):
         # heavy use of Gio API just to load a settings schema in script dir
         scriptpath = os.path.dirname(os.path.realpath(__file__))
-        # Schema should be found in applet dir or /usr/share/glib-2.0/schemas
-        schemaSource = Gio.SettingsSchemaSource.new_from_directory(scriptpath, Gio.SettingsSchemaSource.get_default(), False)
+        try:
+            schemaSource = Gio.SettingsSchemaSource.new_from_directory(scriptpath, Gio.SettingsSchemaSource.get_default(), False)
+        except:
+            schemaSource = Gio.SettingsSchemaSource.get_default()
         lookupSchema = schemaSource.lookup('org.cinnamon.applets.system-monitor', True)
         self.schema = Gio.Settings.new_full(lookupSchema, None, None)
         keys = self.schema.keys()
