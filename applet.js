@@ -91,9 +91,14 @@ function change_style() {
 }
 
 function init(metadata) {
-    //Should find schema even if installed in /usr/share/glib-2.0/schemas
-    let schemaSource = Gio.SettingsSchemaSource.new_from_directory(metadata.path,
-	    Gio.SettingsSchemaSource.get_default(), false);
+    let schemaSource;
+    try {
+        schemaSource = Gio.SettingsSchemaSource.new_from_directory(metadata.path,
+	        Gio.SettingsSchemaSource.get_default(), false);
+	} catch (e) {
+	    //fall back to default schema source
+	    schemaSource = Gio.SettingsSchemaSource.get_default();
+	}
     let schema = schemaSource.lookup('org.cinnamon.applets.system-monitor', true);
     Schema = new Gio.Settings({ settings_schema: schema });
     
