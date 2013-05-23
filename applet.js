@@ -58,7 +58,6 @@ try {
 
 const Main = imports.ui.main;
 const Panel = imports.ui.panel;
-const PanelMenu = imports.ui.panelMenu;
 const PopupMenu = imports.ui.popupMenu;
 
 const Gettext = imports.gettext;
@@ -102,8 +101,8 @@ function init(metadata) {
     let schema = schemaSource.lookup('org.cinnamon.applets.system-monitor', true);
     Schema = new Gio.Settings({ settings_schema: schema });
     
-    Background = new Clutter.Color();
-    Background.from_string(Schema.get_string('background'));
+    let [res, clutterColor] = new Clutter.Color.from_string(Schema.get_string('background'));
+    Background = clutterColor;
     //IconSize = Math.round(Panel.PANEL_ICON_SIZE * 4 / 5);
     //Constant doesn't exist. Took me ages to figure out WHAT caused Net() to break...
     IconSize = 16;
@@ -119,7 +118,7 @@ function init(metadata) {
     }
 }
 
-ErrorDialog = function() {
+let ErrorDialog = function() {
     this._init.apply(this, arguments);
 };
 
@@ -148,7 +147,7 @@ ErrorDialog.prototype = {
     },
 };
 
-Chart = function () {
+let Chart = function () {
     this._init.apply(this, arguments);
 };
 
@@ -231,9 +230,8 @@ ElementBase.prototype = {
 
         this.colors = [];
         for(let color in this.color_name) {
-            let clutterColor = new Clutter.Color();
             let name = this.elt + '-' + this.color_name[color] + '-color';
-            clutterColor.from_string(Schema.get_string(name));
+            let [res, clutterColor] = new Clutter.Color.from_string(Schema.get_string(name));
             Schema.connect('changed::' + name, Lang.bind(
                 clutterColor, function (schema, key) {
                     this.from_string(Schema.get_string(key));
@@ -869,8 +867,7 @@ Graph.prototype = {
         // FIXME Handle colors correctly
         this.colors = ["#444", "#666", "#888", "#aaa", "#ccc", "#eee"];
         for(let color in this.colors) {
-            let clutterColor = new Clutter.Color();
-            clutterColor.from_string(this.colors[color]);
+            let [res, clutterColor] = new Clutter.Color.from_string(this.colors[color]);
             this.colors[color] = clutterColor;
         }
     },
@@ -1037,6 +1034,7 @@ MyApplet.prototype = {
             this.menu.addMenuItem(new PopupMenu.PopupSeparatorMenuItem());
             
             let menu_timeout;
+	    let pie=this.pie;
             this.menu.connect(
                 'open-state-changed',
                 function (menu, isOpen) {
@@ -1057,8 +1055,8 @@ MyApplet.prototype = {
             let _appSys = Cinnamon.AppSystem.get_default();
             let _gsmApp = _appSys.lookup_app('gnome-system-monitor.desktop');
 
-            item = new PopupMenu.PopupMenuItem(_("System Monitor"));
-            item.connect('activate', function () {
+            let item = new PopupMenu.PopupMenuItem(_("System Monitor"));
+	    item.connect('activate', function () {
                 _gsmApp.activate();
             });
             this.menu.addMenuItem(item);
