@@ -378,6 +378,11 @@ Cpu.prototype = {
             }
             
             this.last_total = this.gtop.total;
+        } else if (delta < 0) {
+            this.last = [0,0,0,0,0];
+            this.current = [0,0,0,0,0];
+            this.last_total = 0;
+            this.usage = [0,0,0,1,0];
         }
     },
     _apply: function() {
