@@ -1,6 +1,6 @@
 /*
  system-monitor@ebbes applet
- 
+
  Cinnamon applet displaying system informations in gnome shell status bar, such as memory usage, cpu usage, network rates…
  forked from gnome-shell extension (for gnome-shell 3.2) to Cinnamon applet by ebbes.ebbes@gmail.com
  Changes that were done:
@@ -11,7 +11,7 @@
     * Some small changes I liked
 
  Copyright (C) 2011 Florian Mounier aka paradoxxxzero
- 
+
  This program is free software: you can redistribute it and/or modify
  it under the terms of the GNU General Public License as published by
  the Free Software Foundation, either version 3 of the License, or
@@ -93,11 +93,11 @@ function init(metadata) {
     let schemaSource;
     try {
         schemaSource = Gio.SettingsSchemaSource.new_from_directory(metadata.path,
-	        Gio.SettingsSchemaSource.get_default(), false);
-	} catch (e) {
-	    //fall back to default schema source
-	    schemaSource = Gio.SettingsSchemaSource.get_default();
-	}
+        Gio.SettingsSchemaSource.get_default(), false);
+    } catch (e) {
+        //fall back to default schema source
+        schemaSource = Gio.SettingsSchemaSource.get_default();
+    }
     let schema = schemaSource.lookup('org.cinnamon.applets.system-monitor', true);
     Schema = new Gio.Settings({ schema: 'org.cinnamon.applets.system-monitor' });
 
@@ -106,10 +106,10 @@ function init(metadata) {
     //IconSize = Math.round(Panel.PANEL_ICON_SIZE * 4 / 5);
     //Constant doesn't exist. Took me ages to figure out WHAT caused Net() to break...
     IconSize = 16;
-    
+
     //Determine python binary to use
     [status, stdout, stderr] = GLib.spawn_command_line_sync("python --version");
-    
+
     //Somehow python seems to print version on stderr?
     //Output: e.g. "Python 2.7.3"
     if (stderr && stderr.length > 7)
@@ -124,7 +124,7 @@ let ErrorDialog = function() {
 
 ErrorDialog.prototype = {
     __proto__: ModalDialog.ModalDialog.prototype,
-    
+
     _init: function() {
         ModalDialog.ModalDialog.prototype._init.call(this);
         let mainContentBox = new St.BoxLayout({ style_class: 'polkit-dialog-main-layout', vertical: false });
@@ -179,7 +179,7 @@ Chart.prototype = {
         if (!this.actor.visible) return;
         let [width, height] = this.actor.get_surface_size();
         let cr = this.actor.get_context();
-        
+
         let max;
         if (this.parent.max) {
             max = this.parent.max;
@@ -281,9 +281,9 @@ ElementBase.prototype = {
 
         this.actor.add_actor(this.label);
         this.text_box = new St.BoxLayout();
-        
+
         this.tooltip = new Tooltips.PanelItemTooltip(this, "", orientation);
-        
+
         this.actor.add_actor(this.text_box);
         this.text_items = this.create_text_items();
         for (let item in this.text_items)
@@ -324,7 +324,7 @@ ElementBase.prototype = {
             if (i != this.tip_vals.length - 1)
                 text += "\n";
         }
-        
+
         this.tooltip._tooltip.set_text(text);
         return true;
     },
@@ -369,14 +369,14 @@ Cpu.prototype = {
         this.current[2] = this.gtop.nice;
         this.current[3] = this.gtop.idle;
         this.current[4] = this.gtop.iowait;
-        
+
         let delta = (this.gtop.total - this.last_total)/(100*this.total_cores) ;
         if (delta > 0){
             for (let i = 0;i < 5;i++){
                 this.usage[i] = Math.round((this.current[i] - this.last[i])/delta);
                 this.last[i] = this.current[i];
             }
-            
+
             this.last_total = this.gtop.total;
         }
     },
@@ -532,8 +532,8 @@ Net.prototype = {
             for(let i = 3; i < net_lines.length - 1 ; i++) {
                 let ifc = net_lines[i].replace(/^\s+/g, '').split(":")[0];
                 if(Cinnamon.get_file_contents_utf8_sync('/sys/class/net/' + ifc + '/operstate')
-                .replace(/\s/g, "") == "up" && 
-                ifc.indexOf("br") < 0 && 
+                .replace(/\s/g, "") == "up" &&
+                ifc.indexOf("br") < 0 &&
                 ifc.indexOf("lo") < 0) {
                         this.ifs.push(ifc);
                 }
@@ -545,13 +545,13 @@ Net.prototype = {
         this.usage = [0, 0, 0, 0, 0];
         this.last_time = 0;
         this.menu_item = new PopupMenu.PopupMenuItem(_("Network"), {reactive: false});
-        
+
         ElementBase.prototype._init.call(this, orientation);
-        
+
         this.tip_format(['kiB/s', '/s', 'kiB/s', '/s', '/s']);
         this.update_units();
         Schema.connect('changed::' + this.elt + '-speed-in-bits', Lang.bind(this, this.update_units));
-            
+
         try {
             let iface_list = this.client.get_devices();
             this.NMsigID = []
@@ -588,7 +588,7 @@ Net.prototype = {
                 this.usage[1] /= 8;
             }
         }
-    },     
+    },
     update_iface_list: function(){
         try {
             this.ifs = []
@@ -679,7 +679,7 @@ Disk.prototype = {
         }
         this.gtop = new GTop.glibtop_fsusage();
         this.last = [0,0];
-        
+
         this.usage = [0,0];
         this.last_time = 0;
         GTop.glibtop_get_fsusage(this.gtop, this.mounts[0]);
@@ -699,7 +699,7 @@ Disk.prototype = {
         }
         let time = GLib.get_monotonic_time() / 1000;
         let delta = (time - this.last_time) / 1000;
-        
+
         if (delta > 0)
             for (let i = 0;i < 2;i++) {
                 this.usage[i] =(this.block_size* (accum[i] - this.last[i]) / delta) ;
@@ -709,7 +709,7 @@ Disk.prototype = {
     },
     _apply: function() {
         this.vals = this.usage.slice();
-        for (let i = 0;i < 2;i++) {    
+        for (let i = 0;i < 2;i++) {
                 if (this.usage[i] < 10)
                     this.usage[i] = this.usage[i].toFixed(1);
                 else
@@ -760,8 +760,8 @@ Thermal.prototype = {
             //global.logError("reading sensor");
             let t_str = Cinnamon.get_file_contents_utf8_sync(sfile).split("\n")[0];
             this.temperature = parseInt(t_str)/1000.0;
-        }            
-        else 
+        }
+        else
             global.logError("error reading: " + sfile);
     },
     _apply: function() {
@@ -805,7 +805,7 @@ Freq.prototype = {
             let line = lines[i];
             if(line.search(/cpu mhz/i) < 0)
                 continue;
-            
+
             this.freq = parseInt(line.substring(line.indexOf(':') + 2));
             break;
         }
@@ -856,7 +856,7 @@ Graph.prototype = {
                 this.mounts.push(mount[1]);
             }
         }
-        
+
         this.actor = new St.DrawingArea({ style_class: "sma-chart", reactive: false});
         this.width = arguments[0][1];
         this.height = arguments[0][1];
@@ -886,14 +886,14 @@ Bar = function () {
 
 Bar.prototype = {
     __proto__: Graph.prototype,
-    
+
     _init: function() {
         this.thickness = 15;
         this.fontsize = 14;
         Graph.prototype._init.call(this, arguments);
         this.actor.set_height(this.mounts.length * (3 * this.thickness) / 2);
     },
-    
+
     _draw: function() {
         if (!this.actor.visible) return;
         let [width, height] = this.actor.get_surface_size();
@@ -927,11 +927,11 @@ Pie = function () {
 
 Pie.prototype = {
     __proto__: Graph.prototype,
-    
+
     _init: function() {
         Graph.prototype._init.call(this, arguments);
     },
-    
+
     _draw: function() {
         if (!this.actor.visible) return;
         let [width, height] = this.actor.get_surface_size();
@@ -940,14 +940,14 @@ Pie.prototype = {
         let yc = height / 2;
         let rc = Math.min(xc, yc);
         let pi = Math.PI;
-        
+
         function arc(r, value, max, angle) {
             if(max == 0) return angle;
             let new_angle = angle + (value * 2 * pi / max);
             cr.arc(xc, yc, r, angle, new_angle);
             return new_angle;
         }
-        
+
         let rings = (this.mounts.length < 7 ? this.mounts.length : 7);
         let thickness = (2 * rc) / (3 * rings);
         let fontsize = 14;
@@ -1009,32 +1009,32 @@ MyApplet.prototype = {
                 thermal: new Thermal(orientation),
             }
             let icon = new Icon();
-            
+
             let box = new St.BoxLayout();
-            
+
             this.actor.add_actor(box);
             box.add_actor(icon.actor);
             for (let elt in elts) {
                 box.add_actor(elts[elt].actor);
                 this.menu.addMenuItem(elts[elt].menu_item);
             }
-            
+
             this.pie = new Pie(300, 300);
             this.pie.create_menu_item();
             this.menu.addMenuItem(this.pie.menu_item);
-            
+
             this.bar = new Bar(300, 150);
             this.bar.create_menu_item();
             this.menu.addMenuItem(this.bar.menu_item);
-            
+
             this.change_usage();
-            
+
             Schema.connect('changed::' + 'disk-usage-style', Lang.bind(this, this.change_usage));
-            
+
             this.menu.addMenuItem(new PopupMenu.PopupSeparatorMenuItem());
-            
+
             let menu_timeout;
-	    let pie=this.pie;
+            let pie=this.pie;
             this.menu.connect(
                 'open-state-changed',
                 function (menu, isOpen) {
@@ -1051,12 +1051,12 @@ MyApplet.prototype = {
                     }
                 }
             );
-            
+
             let _appSys = Cinnamon.AppSystem.get_default();
             let _gsmApp = _appSys.lookup_app('gnome-system-monitor.desktop');
 
             let item = new PopupMenu.PopupMenuItem(_("System Monitor"));
-	    item.connect('activate', function () {
+            item.connect('activate', function () {
                 _gsmApp.activate();
             });
             this.menu.addMenuItem(item);
@@ -1078,11 +1078,11 @@ MyApplet.prototype = {
             global.logError(e);
         }
     },
-    
+
     on_applet_clicked: function(event) {
         this.menu.toggle();
     },
-    
+
     change_usage: function() {
         let usage = Schema.get_string('disk-usage-style');
         this.pie.show(usage == 'pie');
@@ -1102,7 +1102,7 @@ ErrorApplet.prototype = {
         this.set_applet_icon_symbolic_name("dialog-error-symbolic");
         this.set_applet_tooltip(_("Error"));
     },
-    
+
     on_applet_clicked: function(event) {
         let errorDialog = new ErrorDialog();
         errorDialog.open();
@@ -1113,7 +1113,7 @@ ErrorApplet.prototype = {
 function main(metadata, orientation) {
     if (!smaDepsGtop || !smaDepsNM) {
         let errorDialog = new ErrorDialog();
-        
+
         let dialog_timeout = Mainloop.timeout_add_seconds(
             1,
             function () {
