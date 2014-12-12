@@ -99,9 +99,9 @@ function init(metadata) {
 	    schemaSource = Gio.SettingsSchemaSource.get_default();
 	}
     let schema = schemaSource.lookup('org.cinnamon.applets.system-monitor', true);
-    Schema = new Gio.Settings({ settings_schema: schema });
-    
-    let [res, clutterColor] = new Clutter.Color.from_string(Schema.get_string('background'));
+    Schema = new Gio.Settings({ schema: 'org.cinnamon.applets.system-monitor' });
+
+    let [res, clutterColor] = Clutter.Color.from_string(Schema.get_string('background'));
     Background = clutterColor;
     //IconSize = Math.round(Panel.PANEL_ICON_SIZE * 4 / 5);
     //Constant doesn't exist. Took me ages to figure out WHAT caused Net() to break...
@@ -231,7 +231,7 @@ ElementBase.prototype = {
         this.colors = [];
         for(let color in this.color_name) {
             let name = this.elt + '-' + this.color_name[color] + '-color';
-            let [res, clutterColor] = new Clutter.Color.from_string(Schema.get_string(name));
+            let [res, clutterColor] = Clutter.Color.from_string(Schema.get_string(name));
             Schema.connect('changed::' + name, Lang.bind(
                 clutterColor, function (schema, key) {
                     this.from_string(Schema.get_string(key));
@@ -867,7 +867,7 @@ Graph.prototype = {
         // FIXME Handle colors correctly
         this.colors = ["#444", "#666", "#888", "#aaa", "#ccc", "#eee"];
         for(let color in this.colors) {
-            let [res, clutterColor] = new Clutter.Color.from_string(this.colors[color]);
+            let [res, clutterColor] = Clutter.Color.from_string(this.colors[color]);
             this.colors[color] = clutterColor;
         }
     },
