@@ -22,9 +22,11 @@ Original author: Florian Mounier aka paradoxxxzero
 
 ## Installing
 
-1. Copy folder to ~/.local/share/cinnamon/applets/system-monitor@ebbes`
+1. `git clone -b patch/2014-11-11 https://github.com/mikechau/system-monitor-applet.git`
+2. Copy folder to ~/.local/share/cinnamon/applets/system-monitor@ebbes`
 
 ## Loading Gschema
+
 1. `cd ~/.local/share/cinnamon/applets/system-monitor@ebbes`
 2. `sudo cp org.cinnamon.applets.system-monitor.gschema.xml /usr/share/glib-2.0/schemas`
 3. `sudo glib-compile-schemas /usr/share/glib-2.0/schemas/`
