@@ -23,7 +23,7 @@ Original author: Florian Mounier aka paradoxxxzero
 ## Installing
 
 1. `git clone -b patch/2014-11-11 https://github.com/mikechau/system-monitor-applet.git`
-2. Copy folder to ~/.local/share/cinnamon/applets/system-monitor@ebbes`
+2. Copy folder to `~/.local/share/cinnamon/applets/system-monitor@ebbes`
 
 ## Loading Gschema
 
