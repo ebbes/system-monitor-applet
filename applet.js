@@ -90,15 +90,17 @@ function change_style() {
 }
 
 function init(metadata) {
-    let schemaSource;
-    try {
-        schemaSource = Gio.SettingsSchemaSource.new_from_directory(metadata.path,
-        Gio.SettingsSchemaSource.get_default(), false);
-    } catch (e) {
-        //fall back to default schema source
-        schemaSource = Gio.SettingsSchemaSource.get_default();
-    }
-    let schema = schemaSource.lookup('org.cinnamon.applets.system-monitor', true);
+    // @TODO: Fix local loading of gschema otherwise default to the one in /usr, currently returns 'undefined'.
+    // let schemaSource;
+    // try {
+    //     schemaSource = Gio.SettingsSchemaSource.new_from_directory(metadata.path,
+    //         Gio.SettingsSchemaSource.get_default(), false);
+    // } catch (e) {
+    //     //fall back to default schema source
+    //     schemaSource = Gio.SettingsSchemaSource.get_default();
+    // }
+    // let schema = schemaSource.lookup('org.cinnamon.applets.system-monitor', true);
+
     Schema = new Gio.Settings({ schema: 'org.cinnamon.applets.system-monitor' });
 
     let [res, clutterColor] = Clutter.Color.from_string(Schema.get_string('background'));
@@ -529,7 +531,7 @@ Net.prototype = {
 
         if(!this.ifs.length){
             let net_lines = Cinnamon.get_file_contents_utf8_sync('/proc/net/dev').split("\n");
-            for(let i = 3; i < net_lines.length - 1 ; i++) {
+            for(let i = 2; i < net_lines.length - 1 ; i++) {
                 let ifc = net_lines[i].replace(/^\s+/g, '').split(":")[0];
                 if(Cinnamon.get_file_contents_utf8_sync('/sys/class/net/' + ifc + '/operstate')
                 .replace(/\s/g, "") == "up" &&
